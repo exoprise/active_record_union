@@ -17,6 +17,8 @@ user_1.posts.union(user_2.posts).union(Post.published)
 user_1.posts.union_all(user_2.posts)
 ```
 
+ActiveRecordUnion is tested against Rails 4.2 and Rails 5.0. It may or may not work on Rails 4.0/4.1.
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -65,7 +67,7 @@ SELECT "posts".* FROM (
   SELECT "posts".* FROM "posts"  WHERE "posts"."user_id" = 1
   UNION
   SELECT "posts".* FROM "posts"  WHERE (published_at < '2014-07-19 16:04:21.918366')
-) posts
+) "posts"
 ```
 
 Because the `union` method returns another `ActiveRecord::Relation`, we can run further queries on the union.
@@ -78,7 +80,7 @@ SELECT "posts".* FROM (
   SELECT "posts".* FROM "posts"  WHERE "posts"."user_id" = 1
   UNION
   SELECT "posts".* FROM "posts"  WHERE (published_at < '2014-07-19 16:06:04.460771')
-) posts  WHERE "posts"."id" IN (6, 7)
+) "posts"  WHERE "posts"."id" IN (6, 7)
 ```
 
 The `union` method can also accept anything that `where` does.
@@ -102,10 +104,10 @@ SELECT "posts".* FROM (
     SELECT "posts".* FROM "posts"  WHERE "posts"."user_id" = 1
     UNION
     SELECT "posts".* FROM "posts"  WHERE "posts"."user_id" = 2
-  ) posts
+  ) "posts"
   UNION
   SELECT "posts".* FROM "posts"  WHERE (published_at < '2014-07-19 16:12:45.882648')
-) posts
+) "posts"
 ```
 
 ### UNION ALL
@@ -120,14 +122,14 @@ SELECT "posts".* FROM (
   SELECT "posts".* FROM "posts" WHERE "posts"."user_id" = 1
   UNION ALL
   SELECT "posts".* FROM "posts" WHERE "posts"."user_id" = 2
-) posts
+) "posts"
 ```
 
 ## Caveats
 
 There's a couple things to be aware of when using ActiveRecordUnion:
 
-1. ActiveRecordUnion with raise an error if you try to UNION any relations that do any preloading/eager-loading. There's no sensible way to do the preloading in the subselects. If enough people complain maybe we can change ActiveRecordUnion to let the queries run anyway but without preloading any records.
+1. ActiveRecordUnion will raise an error if you try to UNION any relations that do any preloading/eager-loading. There's no sensible way to do the preloading in the subselects. If enough people complain, maybe, we can change ActiveRecordUnion to let the queries run anyway but without preloading any records.
 2. There's no easy way to get SQLite to allow ORDER BY in the UNION subselects. If you get a syntax error, you can either write `my_relation.reorder(nil).union(other.reorder(nil))` or switch to Postgres.
 
 ## Another nifty way to reduce extra queries
@@ -184,6 +186,16 @@ This is a gem not a Rails pull request because the standard of code quality for 
 
 ## Changelog
 
+**1.3.0** - January 14, 2018
+  - Ready for Rails 5.2! Updates provided by [@glebm](https://github.com/glebm).
+
+**1.2.0** - June 26, 2016
+  - Ready for Rails 5.0! Updates provided by [@glebm](https://github.com/glebm).
+
+**1.1.1** - Mar 19, 2016
+  - Fix broken polymorphic associations and joins due to improper handling of bind values. Fix by [@efradelos](https://github.com/efradelos), reported by [@Machiaweliczny](https://github.com/Machiaweliczny) and [@seandougall](https://github.com/seandougall).
+  - Quote table name aliases properly. Reported by [@odedniv](https://github.com/odedniv).
+
 **1.1.0** - Mar 29, 2015 - Add UNION ALL support, courtesy of [@pic](https://github.com/pic).
 
 **1.0.1** - Sept 2, 2014 - Allow ORDER BY in UNION subselects for databases that support it (not SQLite).
@@ -200,7 +212,11 @@ This public domain dedication follows the the CC0 1.0 at https://creativecommons
 
 1. Fork it ( https://github.com/brianhempel/active_record_union/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Run the tests with `rspec`
+3. Run the tests:
+  1. Install MySQL and PostgreSQL.
+  2. You need to be able to connect to a local MySQL and Postgres database as the default user, so the specs can create a `test_active_record_union` database. From a vanilla install of MariaDB from Homebrew, this just works. For Postgres installed by Homebrew, you may need to run `$ echo "create database my_computer_user_name;" | psql postgres` since the initial database created by Homebrew is named "postgres" but PG defaults to connecting to a database named after your username.
+  3. Run `rake` to test with all supported Rails versions. All needed dependencies will be installed via Bundler (`gem install bundler` if you happen not to have Bundler yet).
+  4. Run `rake test_rails_4_2` or `rake test_rails_5_2` etc. to test a specific Rails version.
 4. There is also a `bin/console` command to load up a REPL for playing around
 5. Commit your changes (`git commit -am 'Add some feature'`)
 6. Push to the branch (`git push origin my-new-feature`)
